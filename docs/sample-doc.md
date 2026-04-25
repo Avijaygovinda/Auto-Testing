@@ -26,9 +26,34 @@ A simple Flutter ecommerce mobile app for buying and selling products.
 - All form fields must support proper keyboard types (email keyboard for email field, etc.)
 
 ## Screens
-1. **Login Screen** — email + password login
-2. **Signup Screen** — create new account
-3. **Home Screen** — product list
-4. **Product Detail Screen**
-5. **Cart Screen**
-6. **Checkout Screen**
+
+### Login Screen
+- Email + password login.
+- On success, navigate to Home Screen.
+
+### Home Screen
+- Shows a list of all products fetched from the API.
+- Each item shows name, price (in ₹), and stock status.
+- Tapping a product opens the Product Detail Screen.
+- App bar shows a cart icon with a badge displaying total item count.
+- Out-of-stock products are clearly marked.
+
+### Product Detail Screen
+- Shows full product info: name, price, description.
+- "Add to Cart" button. Disabled when stock is 0.
+- Tapping "Add to Cart" shows a confirmation snackbar and increments cart badge.
+
+### Cart Screen
+- Lists all items in the cart with name, quantity, subtotal.
+- Each item has a delete button to remove it.
+- Shows running total at the bottom.
+- Checkout button clears the cart and shows "Order placed" snackbar.
+- Empty state shows "Your cart is empty".
+
+## Cart Behavior Rules
+- Cart is in-memory only — does NOT persist across app restarts.
+- Adding the same product twice increments its quantity, does not duplicate the row.
+- Cart should be cleared on logout (TBD — verify with developer).
+
+## Navigation Flow
+Login → Home → Product Detail → (Add to Cart) → Home → Cart → Checkout → back to Home.

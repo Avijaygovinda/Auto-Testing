@@ -81,7 +81,7 @@ def generate_test_cases(doc_path: str, dart_path: str) -> dict:
 
     print(f"Calling Gemini Flash for {dart_filename}...")
     response = client.models.generate_content(
-        model="gemini-flash-latest",
+        model="gemini-2.5-flash",
         contents=full_prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -92,7 +92,7 @@ def generate_test_cases(doc_path: str, dart_path: str) -> dict:
 
     # 5. Log it (critical for prompt iteration)
     log_api_call(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         prompt=full_prompt,
         response=response_text,
         metadata={"dart_file": dart_filename, "doc_file": Path(doc_path).name},
