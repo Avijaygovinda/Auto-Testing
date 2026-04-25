@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import List
 
 
-def build_app_plan(app_map: dict, screen_plans: List[dict]) -> dict:
-    """Merge app map + per-screen plans into one document."""
+def build_app_plan(app_map: dict, screen_plans: List[dict],
+                   flow_plan: dict | None = None) -> dict:
+    """Merge app map + per-screen plans (+ optional flow plan) into one document."""
     total_cases = sum(len(p.get("test_cases", [])) for p in screen_plans)
+    flow_cases = (flow_plan or {}).get("flow_test_cases", []) or []
 
     screens_index = []
     all_questions: list[str] = []
@@ -51,20 +53,32 @@ def build_app_plan(app_map: dict, screen_plans: List[dict]) -> dict:
             seen_questions.add(key)
             all_questions.append(q.strip())
 
+    # Pull flow-tester questions in too.
+    if flow_plan:
+        for q in flow_plan.get("questions_for_developer", []):
+            key = q.strip().lower()
+            if key and key not in seen_questions:
+                seen_questions.add(key)
+                all_questions.append(q.strip())
+
     return {
         "app_summary": app_map.get("app_summary"),
         "total_screens": len(screen_plans),
-        "total_test_cases": total_cases,
+        "total_screen_test_cases": total_cases,
+        "total_flow_test_cases": len(flow_cases),
+        "total_test_cases": total_cases + len(flow_cases),
         "screens": screens_index,
         "navigation": app_map.get("navigation", []),
         "key_flows": app_map.get("key_flows", []),
+        "flow_test_cases": flow_cases,
         "cross_cutting_concerns": app_map.get("cross_cutting_concerns", []),
         "consolidated_questions_for_developer": all_questions,
     }
 
 
-def write_app_plan(out_dir: Path, app_map: dict, screen_plans: List[dict]) -> Path:
-    plan = build_app_plan(app_map, screen_plans)
+def write_app_plan(out_dir: Path, app_map: dict, screen_plans: List[dict],
+                   flow_plan: dict | None = None) -> Path:
+    plan = build_app_plan(app_map, screen_plans, flow_plan)
     out_path = out_dir / "_app_plan.json"
     out_path.write_text(json.dumps(plan, indent=2, ensure_ascii=False))
     return out_path
