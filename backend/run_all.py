@@ -34,9 +34,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.step2_multi_file import run as run_phase2
-from backend.step3_visual import run as run_phase3
-from backend.step4_real_device import run as run_phase4
-from backend.agents.realdevice_runner import _detect_device
+from backend.step4_v2 import run as run_phase4_v2
+from backend.agents.realdevice_v2.runner import _detect_device
 
 
 _BAR = "=" * 70
@@ -77,30 +76,30 @@ def main() -> None:
     _banner("PHASE 2 — code analysis & logic test plan")
     run_phase2(str(project), str(doc))
 
-    if skip_phase3:
-        print("\n[skipped] Phase 3 — simulated visual.")
-    else:
-        _banner("PHASE 3 — simulated multi-resolution screenshots + vision")
+    # Phase 3 (simulated widget-test screenshots) is intentionally NOT run by
+    # default. v2 supersedes it with real-device runs that have real API data.
+    # Pass --include-phase3 to opt in for legacy behavior.
+    if "--include-phase3" in sys.argv:
+        from backend.step3_visual import run as run_phase3
+        _banner("PHASE 3 (legacy) — simulated multi-resolution screenshots")
         try:
             run_phase3(str(project), str(app_map_path), skip_vision=skip_vision)
         except Exception as e:
             print(f"\n[Phase 3 FAILED] {type(e).__name__}: {e}")
-            print("Continuing to Phase 4 (if not skipped).")
 
     if skip_phase4:
-        print("\n[skipped] Phase 4 — real device.")
+        print("\n[skipped] Phase 4 v2 — real device.")
     else:
-        _banner("PHASE 4 — real device, real API, real data + vision")
+        _banner("PHASE 4 v2 — real device + AI navigation + HITL")
         device = _detect_device()
         if not device:
             print("[Phase 4 SKIPPED] No connected device found via `adb devices`.")
-            print("Plug in a phone with USB debugging on (or `adb connect <ip>:5555`),")
-            print("then re-run with: python run_all.py <project> --skip-phase3 --skip-phase4=false")
+            print("Plug in phone with USB debugging or `adb connect <ip>:5555`, then re-run.")
         else:
             try:
-                run_phase4(str(project), str(app_map_path), skip_vision=skip_vision)
+                run_phase4_v2(str(project), str(doc), skip_vision=skip_vision)
             except Exception as e:
-                print(f"\n[Phase 4 FAILED] {type(e).__name__}: {e}")
+                print(f"\n[Phase 4 v2 FAILED] {type(e).__name__}: {e}")
 
     elapsed = time.time() - started
     _banner(f"ALL DONE — {elapsed:.0f}s elapsed")
