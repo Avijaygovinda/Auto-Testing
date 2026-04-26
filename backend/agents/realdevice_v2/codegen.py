@@ -76,15 +76,24 @@ const List<String> _targetScreens = [
 ];
 
 Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {{
-  final res = await http.post(
-    Uri.parse('$_hostBase$path'),
-    headers: const {{'Content-Type': 'application/json'}},
-    body: jsonEncode(body),
-  ).timeout(const Duration(seconds: 60));
-  if (res.statusCode >= 400) {{
-    throw Exception('host /$path -> ${{res.statusCode}}: ${{res.body}}');
+  // On any host failure (quota, network, server error) we degrade gracefully
+  // instead of crashing the whole test. Returning a skip-shaped fallback lets
+  // the loop move on to the next target screen.
+  try {{
+    final res = await http.post(
+      Uri.parse('$_hostBase$path'),
+      headers: const {{'Content-Type': 'application/json'}},
+      body: jsonEncode(body),
+    ).timeout(const Duration(seconds: 90));
+    if (res.statusCode >= 400) {{
+      print('FLOWTEST_HOST_ERROR:$path:${{res.statusCode}}:${{res.body}}');
+      return {{'action': 'skip', 'matches_expected': false, 'host_error': res.statusCode}};
+    }}
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }} catch (e) {{
+    print('FLOWTEST_HOST_EXCEPTION:$path:$e');
+    return {{'action': 'skip', 'matches_expected': false, 'host_exception': '$e'}};
   }}
-  return jsonDecode(res.body) as Map<String, dynamic>;
 }}
 
 Future<Uint8List> _shot(IntegrationTestWidgetsFlutterBinding binding,

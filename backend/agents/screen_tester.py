@@ -192,7 +192,8 @@ def test_screen(
         response=text,
         metadata={"pass": "B_screen", "screen": screen.rel_path, "dep_count": len(deps)},
     )
-    return json.loads(text)
+    from ..utils import json_repair
+    return json_repair.loads(text)
 
 
 if __name__ == "__main__":

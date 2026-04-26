@@ -93,7 +93,8 @@ def analyze_screenshot(
             "image_bytes": len(image_bytes),
         },
     )
-    return json.loads(text)
+    from ..utils import json_repair
+    return json_repair.loads(text)
 
 
 def analyze_project_screenshots(

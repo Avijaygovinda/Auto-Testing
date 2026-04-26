@@ -129,7 +129,8 @@ def decide_next_action(
         response=text,
         metadata={"phase": "4v2_nav", "target": target_screen},
     )
-    parsed = json.loads(text)
+    from ...utils import json_repair
+    parsed = json_repair.loads(text)
     # Inject the actual cred value when input_text references a placeholder.
     if parsed.get("action") == "enter_text":
         it = parsed.get("input_text", "")
@@ -173,4 +174,5 @@ def verify_screen(
         response=text,
         metadata={"phase": "4v2_verify", "expected": expected_screen},
     )
-    return json.loads(text)
+    from ...utils import json_repair
+    return json_repair.loads(text)

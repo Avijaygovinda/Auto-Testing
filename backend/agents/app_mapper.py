@@ -132,7 +132,8 @@ def map_app(files: List[DartFile], documentation: str, *, sleep_before: float = 
         response=text,
         metadata={"pass": "A_app_map", "file_count": len(files)},
     )
-    return json.loads(text)
+    from ..utils import json_repair
+    return json_repair.loads(text)
 
 
 if __name__ == "__main__":

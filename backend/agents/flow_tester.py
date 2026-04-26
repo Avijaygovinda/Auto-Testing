@@ -92,4 +92,5 @@ def test_flows(app_map: dict, screen_plans: List[dict], documentation: str,
         response=text,
         metadata={"pass": "C_flows", "screen_count": len(screen_plans)},
     )
-    return json.loads(text)
+    from ..utils import json_repair
+    return json_repair.loads(text)
