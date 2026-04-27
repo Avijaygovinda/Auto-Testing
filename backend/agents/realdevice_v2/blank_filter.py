@@ -109,13 +109,34 @@ def _decode_png_pixels(data: bytes, sample_grid: int = 32) -> list[Tuple[int, in
     return pixels
 
 
-def is_blank(png_path: str | Path, threshold: float = 0.85,
-             color_tolerance: int = 12) -> tuple[bool, dict]:
+def _edge_density(pixels: list[Tuple[int, int, int]], step_threshold: int = 24) -> float:
+    """Fraction of adjacent sampled pixels with significant RGB delta.
+
+    A real screen with content (text, icons, cards) has many sharp transitions
+    between adjacent sampled pixels. A genuinely blank/uniform screen has
+    almost none. This is a cheap proxy for "is there visible content?" that
+    works regardless of theme color (light or dark).
+    """
+    if len(pixels) < 2:
+        return 0.0
+    edges = 0
+    for i in range(len(pixels) - 1):
+        a, b = pixels[i], pixels[i + 1]
+        if max(abs(a[0] - b[0]), abs(a[1] - b[1]), abs(a[2] - b[2])) > step_threshold:
+            edges += 1
+    return edges / (len(pixels) - 1)
+
+
+def is_blank(png_path: str | Path, dominant_threshold: float = 0.985,
+             color_tolerance: int = 12, edge_threshold: float = 0.005) -> tuple[bool, dict]:
     """Return (is_blank, info_dict).
 
-    threshold: fraction of sampled pixels matching dominant color → blank.
-    color_tolerance: each RGB channel quantized to nearest multiple of this
-                     before counting, so near-identical pixels group together.
+    Image is "blank" only when BOTH:
+      - one quantized color dominates >= dominant_threshold of samples, AND
+      - edge density (adjacent-pixel high-contrast transitions) < edge_threshold.
+
+    The second check fixes the false-positive on dark-theme screens where
+    the background eats most pixels but the screen still has substantial UI.
     """
     data = Path(png_path).read_bytes()
     pixels = _decode_png_pixels(data)
@@ -129,11 +150,15 @@ def is_blank(png_path: str | Path, threshold: float = 0.85,
     counter = Counter(quantized)
     most_common, count = counter.most_common(1)[0]
     fraction = count / len(quantized)
-    return fraction >= threshold, {
+    edges = _edge_density(pixels)
+    blank = fraction >= dominant_threshold and edges < edge_threshold
+    return blank, {
         "sampled": len(quantized),
         "dominant_color_qzd": most_common,
         "dominant_fraction": round(fraction, 3),
-        "threshold": threshold,
+        "edge_density": round(edges, 4),
+        "dominant_threshold": dominant_threshold,
+        "edge_threshold": edge_threshold,
     }
 
 
