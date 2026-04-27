@@ -268,6 +268,20 @@ Future<void> _resetToHome(WidgetTester tester) async {{
 void main() {{
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  // Catch every Flutter framework error so a single buggy screen in the
+  // app under test doesn't terminate exploration of the remaining screens.
+  FlutterError.onError = (FlutterErrorDetails details) async {{
+    final summary = details.exceptionAsString();
+    print('FLOWTEST_FLUTTER_ERROR: $summary');
+    try {{
+      await _post('/flutter_error', {{
+        'error': summary,
+        'stack': details.stack?.toString() ?? '',
+        'context': details.context?.toString() ?? '',
+      }});
+    }} catch (_) {{}}
+  }};
+
   testWidgets('FlowTest v2 — drive real device with AI nav',
       (WidgetTester tester) async {{
     await tester.pumpWidget(const SizedBox.shrink());
@@ -286,9 +300,31 @@ void main() {{
 
     // Don't reset to home between targets — auth state and any setup work
     // (login, permissions) carries forward. AI navigates from current state
-    // to next target naturally.
+    // to next target naturally. Wrap each target in try/catch so app
+    // crashes during one target don't prevent the next from running.
     for (final target in _targetScreens) {{
-      await _navigateTo(binding, tester, target);
+      try {{
+        await _navigateTo(binding, tester, target);
+      }} catch (e, st) {{
+        print('FLOWTEST_TARGET_FAILED: $target: $e');
+        try {{
+          await _post('/flutter_error', {{
+            'error': '$e',
+            'stack': '$st',
+            'context': 'while navigating to $target',
+          }});
+        }} catch (_) {{}}
+        // Try to recover the navigator stack so the next target can start
+        // from a sensible place.
+        try {{
+          for (var i = 0; i < 4; i++) {{
+            final nav = Navigator.of(tester.element(find.byType(Scaffold).first));
+            if (!nav.canPop()) break;
+            nav.pop();
+            await _settle(tester, seconds: 2);
+          }}
+        }} catch (_) {{}}
+      }}
     }}
 
     await _post('/done', {{'summary': 'ok'}});

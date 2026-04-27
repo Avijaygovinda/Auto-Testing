@@ -117,6 +117,7 @@ def run(project_root: str, doc_path: str | None, *, skip_vision: bool = False) -
         print(f"      {visual_report['total_issues_found']} UI issues, "
               f"severity {visual_report['severity_counts']}.")
 
+    flutter_errors = result.get("flutter_errors", []) or []
     print()
     print("=" * 70)
     print(f"PNGs:           {len(result['saved_pngs'])} at {result['screenshots_dir']}")
@@ -124,6 +125,13 @@ def run(project_root: str, doc_path: str | None, *, skip_vision: bool = False) -
     if visual_report is not None:
         print(f"Visual report:  backend/logs/visual_report.json "
               f"({visual_report['total_issues_found']} issues)")
+    if flutter_errors:
+        print(f"Runtime errors: {len(flutter_errors)} caught from the running app:")
+        for err in flutter_errors[:5]:
+            line1 = (err.get("error") or "").splitlines()[0] if err.get("error") else ""
+            print(f"   - {line1[:140]}")
+        if len(flutter_errors) > 5:
+            print(f"   ... + {len(flutter_errors) - 5} more in _manifest.json.")
     print("=" * 70)
 
 

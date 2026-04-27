@@ -52,6 +52,7 @@ class HostServer:
         self.on_hitl = on_hitl
         self.events: deque[dict] = deque()
         self.saved_pngs: list[str] = []
+        self.flutter_errors: list[dict] = []
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
 
@@ -98,6 +99,11 @@ class HostServer:
                     self._handle_hitl(data)
                 elif self.path == "/screenshot":
                     self._handle_screenshot(data)
+                elif self.path == "/flutter_error":
+                    outer.flutter_errors.append(data)
+                    outer.events.append({"type": "flutter_error", "summary": data.get("error", "")[:200]})
+                    print(f"[host] Flutter error captured from device: {data.get('error', '')[:160]}")
+                    self._send_json(200, {"ok": True})
                 elif self.path == "/done":
                     self._send_json(200, {"ok": True})
                 else:

@@ -127,6 +127,7 @@ def run_on_device(
         "project": project_slug,
         "screenshots_dir": str(screenshots_dir),
         "saved_pngs": server.saved_pngs,
+        "flutter_errors": server.flutter_errors,
         "events": list(server.events)[-200:],  # last 200 for sanity
         "flutter_test_returncode": proc.returncode,
     }
