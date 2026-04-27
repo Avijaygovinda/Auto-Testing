@@ -69,7 +69,7 @@ import 'package:http/http.dart' as http;
 import 'package:{package_name}/main.dart';
 
 const _hostBase = 'http://127.0.0.1:{port}';
-const _maxStepsPerTarget = 8;
+const _maxStepsPerTarget = 12;
 
 const List<String> _targetScreens = [
   {targets_dart}
@@ -139,9 +139,12 @@ Future<void> _executeAction(
       if (all.evaluate().isNotEmpty) await tester.tap(all.first);
       break;
     case 'enter_text':
+      final fieldIdx = (action['field_index'] as num?)?.toInt() ?? 0;
       final fields = find.byType(TextField);
-      if (fields.evaluate().isNotEmpty && input != null) {{
-        await tester.enterText(fields.first, input);
+      final list = fields.evaluate().toList();
+      if (list.isNotEmpty && input != null) {{
+        final clamped = fieldIdx.clamp(0, list.length - 1);
+        await tester.enterText(fields.at(clamped), input);
         await tester.pump();
       }}
       break;
@@ -203,7 +206,15 @@ Future<void> _navigateTo(IntegrationTestWidgetsFlutterBinding binding,
       'target_screen': target,
     }});
     final actionKind = action['action'] as String? ?? 'skip';
-    if (actionKind == 'skip') return;
+    if (actionKind == 'skip') {{
+      // Save whatever the screen looks like even though we gave up — partial
+      // progress is still useful for visual review.
+      await _post('/screenshot', {{
+        'name': '${{_safe(target)}}_partial_step$step',
+        'screenshot_b64': base64Encode(shot),
+      }});
+      return;
+    }}
     await _executeAction(tester, action);
 
     // Verify after each step. Once verifier says we're on target, stop.
@@ -220,7 +231,20 @@ Future<void> _navigateTo(IntegrationTestWidgetsFlutterBinding binding,
       }});
       return;
     }}
+    // Save intermediate screenshot so a partial run still has artifacts.
+    if (step % 3 == 0) {{
+      await _post('/screenshot', {{
+        'name': '${{_safe(target)}}_intermediate_step$step',
+        'screenshot_b64': base64Encode(verifyShot),
+      }});
+    }}
   }}
+  // Out of steps — save final state for inspection.
+  final finalShot = await _shot(binding, tester);
+  await _post('/screenshot', {{
+    'name': '${{_safe(target)}}_gaveup',
+    'screenshot_b64': base64Encode(finalShot),
+  }});
   print('FLOWTEST_NOTE: gave up reaching target $target after $_maxStepsPerTarget steps.');
 }}
 
@@ -260,8 +284,10 @@ void main() {{
       'screenshot_b64': base64Encode(homeShot),
     }});
 
+    // Don't reset to home between targets — auth state and any setup work
+    // (login, permissions) carries forward. AI navigates from current state
+    // to next target naturally.
     for (final target in _targetScreens) {{
-      await _resetToHome(tester);
       await _navigateTo(binding, tester, target);
     }}
 

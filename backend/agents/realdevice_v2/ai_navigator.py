@@ -39,6 +39,7 @@ Output ONLY a JSON object with this exact shape:
   "action": "tap_text" | "tap_icon" | "tap_widget_type" | "tap_first_of_type" | "enter_text" | "scroll_down" | "scroll_up" | "back" | "wait" | "hitl" | "skip",
   "selector": "string used by the action (text label, icon name, widget type)",
   "input_text": "ONLY for enter_text — what to type",
+  "field_index": 0,
   "wait_after_seconds": 3,
   "confidence": "high" | "medium" | "low",
   "reasoning": "why this action — reference visible elements and docs",
@@ -49,7 +50,10 @@ Output ONLY a JSON object with this exact shape:
 Rules:
 - If the screen is showing a login form and TARGET requires authentication,
   use enter_text actions to fill credentials, then tap_text 'Login' (or
-  whatever the actual button label is).
+  whatever the actual button label is). For enter_text, set "field_index"
+  to the zero-based index of the TextField you want to type into (counting
+  TextFields visible top-to-bottom, left-to-right). Do not re-fill a field
+  that already has text — pick the next empty field.
 - If the screen is a permission popup, return tap_native_dialog with
   selector = the button text ('Allow', 'While using app', etc.).
 - If the action would PERMANENTLY DELETE data, place an order, send a
